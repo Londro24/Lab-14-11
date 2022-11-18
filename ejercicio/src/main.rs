@@ -70,7 +70,6 @@ fn open_file_to_append(path: &Path) -> File{
 
 
 fn print_tablero(partida: Partida) -> Partida {
-    let mut tablero: [[&str; 3]; 3] = [[""; 3]; 3];
     print!("\n  | 1 | 2 | 3 | ");
     for a in 0..3 {
         match a {
@@ -95,7 +94,7 @@ fn print_tablero(partida: Partida) -> Partida {
 
 fn crear_id(path: &Path) -> String{
     let mut contador = 0;
-    let mut text = open_file(path);
+    let text = open_file(path);
 
     let mut id: String = String::new();
     println!("\nIngrese el nombre de la partida");
@@ -136,12 +135,12 @@ fn pedir_jugada(num: u32, mut partida: Partida) -> Partida {
         println!("\nturno del jugador {}:", num);
         
         stdin().read_line(&mut jugada).unwrap();
-
+        
         let mut correcto = match &*jugada.to_lowercase().trim() {
             "a1" | "a2" | "a3" | "b1" | "b2" | "b3" | "c1" | "c2" | "c3" => true,
             _ => false
         };
-
+        
         if jugada.to_lowercase().contains("a") {
             fila = 0; 
         } else if jugada.to_lowercase().contains("b") {
@@ -149,7 +148,7 @@ fn pedir_jugada(num: u32, mut partida: Partida) -> Partida {
         } else {
             fila = 2;
         }
-
+        
         if jugada.to_lowercase().contains("1") {
             columna = 0; 
         } else if jugada.to_lowercase().contains("2") {
@@ -157,7 +156,7 @@ fn pedir_jugada(num: u32, mut partida: Partida) -> Partida {
         } else {
             columna = 2;
         }
-
+        
         for a in 0..3 {
             for b in 0..3 {
                 if a == fila && b == columna && partida.jugada[a][b] != "".to_string(){
@@ -166,7 +165,7 @@ fn pedir_jugada(num: u32, mut partida: Partida) -> Partida {
                 
             }
         }
-
+        
         if correcto {
             break
         }
@@ -222,7 +221,7 @@ fn verificar_fin(num: u32, mut partida: Partida) -> Partida {
 }
 
 
-fn guardar_partida(path: &Path, partida: Partida) -> Partida {
+fn guardar_partida(path: &Path, partida: Partida){
     let mut cadena = format!("{}:{}:{}:", partida.id,
                                             partida.jx,
                                             partida.jo,);
@@ -235,8 +234,6 @@ fn guardar_partida(path: &Path, partida: Partida) -> Partida {
 
     let mut file = open_file_to_append(path);
     file.write_all(cadena.as_bytes()).unwrap();
-                           
-    partida
 }
 
 
@@ -263,12 +260,61 @@ fn jugar_partida(path: &Path) {
     println!("\nFin de la partida\nGanador:{}", partida.ganador);
     partida.id = crear_id(path);
 
-    partida = guardar_partida(path, partida);
+    guardar_partida(path, partida);
 }
 
 
 fn consultar_partida(path: &Path) {
-    println!("Elija que partida ver");
+    let text = open_file(path);
+
+    loop {
+        let mut partida: Partida = Default::default();
+        let mut entrada: String = String::new();
+
+        println!("\nElija que partida ver");
+        for linea in text.split("\n") {
+            for palabra in linea.split(":"){
+                println!("{}", palabra);
+                break;
+            }
+        }
+        println!("(0) para salir\n");
+
+
+        stdin().read_line(&mut entrada).unwrap();
+
+        if entrada.trim() == "0" {
+            break;
+        }
+
+        for linea in text.split("\n") {
+            let mut contador = 0;
+            for palabra in linea.split(":"){
+                match contador {
+                    0 => partida.id = palabra.to_string(),
+                    1 => partida.jx = palabra.to_string(),
+                    2 => partida.jo = palabra.to_string(),
+                    3 => partida.jugada[0][0] = palabra.to_string(),
+                    4 => partida.jugada[0][1] = palabra.to_string(),
+                    5 => partida.jugada[0][2] = palabra.to_string(),
+                    6 => partida.jugada[1][0] = palabra.to_string(),
+                    7 => partida.jugada[1][1] = palabra.to_string(),
+                    8 => partida.jugada[1][2] = palabra.to_string(),
+                    9 => partida.jugada[2][0] = palabra.to_string(),
+                    10 => partida.jugada[2][1] = palabra.to_string(),
+                    11 => partida.jugada[2][2] = palabra.to_string(),
+                    12 => partida.ganador = palabra.to_string(),
+                    _ => continue
+                }
+                contador += 1;
+            }
+            if partida.id == entrada.trim() {
+                break
+            }
+        }
+        partida = print_tablero(partida);
+        println!("\nGanador:{}", partida.ganador);
+    }
 
 }
 
@@ -276,7 +322,7 @@ fn consultar_partida(path: &Path) {
 fn menu() -> u32 {
     let mut entrada: String = String::new();
     loop {
-        println!("Elija opción:");
+        println!("\nElija opción:");
         println!("    (1) Jugar una nueva partida.");
         println!("    (2) Consultar una partida partida.");
         println!("    (0) Salir.");

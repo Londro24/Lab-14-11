@@ -76,7 +76,8 @@ fn print_tablero(partida: Partida) -> Partida {
         match a {
             0 => print!("\n--+---+---+---+\na |"),
             1 => print!("\n--+---+---+---+\nb |"),
-            _ => print!("\n--+---+---+---+\nc |")
+            2 => print!("\n--+---+---+---+\nc |"),
+            _ => print!("")
         }
         for b in 0..3 {
             if partida.jugada[a][b] == "X" {
@@ -97,7 +98,7 @@ fn crear_id(path: &Path) -> String{
     let mut text = open_file(path);
 
     let mut id: String = String::new();
-    println!("Ingrese el nombre de la partida");
+    println!("\nIngrese el nombre de la partida");
     stdin().read_line(&mut id).unwrap();
 
     for a in text.split("\n") {
@@ -132,8 +133,8 @@ fn pedir_jugada(num: u32, mut partida: Partida) -> Partida {
     let mut columna = 0;
     loop {
         let mut jugada: String = String::new();
-
-        print!("turno del jugador {}:", num);
+        println!("\nturno del jugador {}:", num);
+        
         stdin().read_line(&mut jugada).unwrap();
 
         let mut correcto = match &*jugada.to_lowercase().trim() {
@@ -180,19 +181,24 @@ fn pedir_jugada(num: u32, mut partida: Partida) -> Partida {
 }
 
 
-fn verificar_fin(mut partida: Partida) -> Partida {
+fn verificar_fin(num: u32, mut partida: Partida) -> Partida {
+    let mut es_fin: bool = false;
     for a in 0..3 {
-        if partida.jugada[0][a] == partida.jugada[1][a] && partida.jugada[2][a] == partida.jugada[1][a] {
-            partida.ganador = partida.jugada[0][a].to_string()
-
-        } else if partida.jugada[a][0] == partida.jugada[a][1] && partida.jugada[a][2] == partida.jugada[a][1] {
-            partida.ganador = partida.jugada[a][0].to_string()
+        if partida.jugada[0][a] == partida.jugada[1][a] && partida.jugada[0][a] == partida.jugada[2][a] && partida.jugada[0][a] != "".to_string() {
+            //Verificación vertical
+            es_fin = true
+        
+        } else if partida.jugada[a][0] == partida.jugada[a][1] && partida.jugada[a][2] == partida.jugada[a][1] && partida.jugada[a][0] != "".to_string() {
+            // Verificación horizontal
+            es_fin = true
         }
     }
-    if partida.jugada[0][0] == partida.jugada[1][1] && partida.jugada[2][2] == partida.jugada[1][1] {
-        partida.ganador = partida.jugada[0][0].to_string()
-    } else if partida.jugada[0][2] == partida.jugada[1][1] && partida.jugada[2][0] == partida.jugada[1][1] {
-        partida.ganador = partida.jugada[0][2].to_string()
+    if partida.jugada[0][0] == partida.jugada[1][1] && partida.jugada[2][2] == partida.jugada[1][1] && partida.jugada[1][1] != "".to_string() {
+        //Verificación diagonal abajo \
+        es_fin = true
+    } else if partida.jugada[0][2] == partida.jugada[1][1] && partida.jugada[2][0] == partida.jugada[1][1] && partida.jugada[1][1] != "".to_string() {
+        //Verificación diagonal arriba /
+        es_fin = true
     }
     let mut contador = 0;
     for a in 0..3 {
@@ -206,7 +212,31 @@ fn verificar_fin(mut partida: Partida) -> Partida {
     if contador == 9 {
         partida.ganador = "Empate".to_string()
     }
+    if es_fin {
+        partida.ganador = match num {
+            1 => partida.jx.to_string(),
+            _ => partida.jo.to_string(),   
+        }
+    }
     return partida;
+}
+
+
+fn guardar_partida(path: &Path, partida: Partida) -> Partida {
+    let mut cadena = format!("{}:{}:{}:", partida.id,
+                                            partida.jx,
+                                            partida.jo,);
+    for a in 0..3 {
+        for b in 0..3 {
+            cadena = cadena + &format!("{}:", partida.jugada[a][b]);
+        }
+    }
+    cadena = cadena + &format!("{}\n", partida.ganador);
+
+    let mut file = open_file_to_append(path);
+    file.write_all(cadena.as_bytes()).unwrap();
+                           
+    partida
 }
 
 
@@ -215,25 +245,30 @@ fn jugar_partida(path: &Path) {
     partida.jx = pedir_jugador(1).trim().to_string();
     partida.jo = pedir_jugador(2).trim().to_string();
     loop {
-        for a in 1..3 {
-            partida = print_tablero(partida);
-            partida = pedir_jugada(a, partida);
-            partida = verificar_fin(partida);
-            if partida.ganador != "".to_string() {
-                break
-            }
+        partida = print_tablero(partida);
+        partida = pedir_jugada(1, partida);
+        partida = verificar_fin(1, partida);
+        partida = print_tablero(partida);
+        if partida.ganador.trim() != "".to_string() {
+            break
+        }
+        
+        partida = pedir_jugada(2, partida);
+        partida = verificar_fin(2, partida);
+        if partida.ganador != "".to_string() {
+            break
         }
     }
 
+    println!("\nFin de la partida\nGanador:{}", partida.ganador);
     partida.id = crear_id(path);
 
-    println!("{:?}", partida)
-
+    partida = guardar_partida(path, partida);
 }
 
 
 fn consultar_partida(path: &Path) {
-
+    println!("Elija que partida ver");
 
 }
 
